@@ -1,0 +1,21 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 20251006222416-create-notifications-table
+      author: sayanseksenbaev
+      changes:
+        - sqlFile:
+            path: migrations/changes/20251006222416-create-notifications-table.sql
+      rollback:
+        - sqlFile:
+            path: migrations/changes/20251006222416-create-notifications-table-rollback.sql
+
+  - changeSet:
+      id: 20251006222705-alter-notifications-table
+      author: sayanseksenbaev
+      changes:
+        - sqlFile:
+            path: migrations/changes/20251006222705-alter-notifications-table.sql
+      rollback:
+        - sqlFile:
+            path: migrations/changes/20251006222705-alter-notifications-table-rollback.sql

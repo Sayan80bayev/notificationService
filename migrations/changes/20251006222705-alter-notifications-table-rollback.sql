@@ -1,0 +1,2 @@
+ALTER TABLE notifications
+ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'system';
