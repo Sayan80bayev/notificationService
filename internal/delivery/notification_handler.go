@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"net/http"
+	"notificationService/cmd/server/ws"
 	"notificationService/internal/model"
 	"notificationService/internal/service"
 	"strconv"
@@ -155,4 +156,30 @@ func parsePositiveInt(val string) (int, error) {
 		return 0, err
 	}
 	return parsed, nil
+}
+
+func (h *NotificationHandler) SendMessageWS(c *gin.Context) {
+	var req struct {
+		UserUUID string `json:"user_uuid"`
+		Message  string `json:"message"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userUUID, err := uuid.Parse(req.UserUUID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+
+	ws.SendNotification(userUUID, req.Message)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "sent",
+		"message": req.Message,
+		"user":    userUUID.String(),
+	})
 }

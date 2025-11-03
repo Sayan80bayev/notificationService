@@ -17,6 +17,9 @@ update-sql:
 validate:
 	liquibase --defaultsFile=$(DB_PROPS) validate
 
+history:
+	liquibase --defaultsFile=$(DB_PROPS) history
+
 new-migration:
 	@timestamp=$$(date +%Y%m%d%H%M%S); \
 	forward="$$timestamp-$(name).sql"; \
