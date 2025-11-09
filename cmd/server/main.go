@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/Sayan80bayev/go-project/pkg/logging"
 	"github.com/gin-gonic/gin"
 	"notificationService/cmd/server/ws"
@@ -20,6 +21,14 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(logging.Middleware)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go ctn.Consumer.Start(ctx)
+	defer func() {
+		cancel()
+		ctn.Consumer.Close()
+	}()
+
 	router.RegisterNotificationRoutes(r, ctn.NotificationService)
 	ws.SetupWebSocketRoutes(r, ctn.JWKSUrl)
 	log.Info("server is running on port " + ctn.Config.Port)

@@ -9,6 +9,7 @@ import (
 	"github.com/Sayan80bayev/go-project/pkg/messaging"
 	_ "github.com/lib/pq"
 	"notificationService/internal/config"
+	ms "notificationService/internal/messaging"
 	"notificationService/internal/repository"
 	"notificationService/internal/service"
 	"time"
@@ -45,12 +46,7 @@ func Init() (*Container, error) {
 		return nil, err
 	}
 
-	producer, err := messaging.NewKafkaProducer(cfg.KafkaBrokers[0], cfg.KafkaProducerTopic)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kafka producer: %w", err)
-	}
-
-	consumer, err := initKafkaConsumer(cfg)
+	consumer, err := initRabbitMQConsumer(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +61,6 @@ func Init() (*Container, error) {
 	return &Container{
 		DB:                     db,
 		Redis:                  cacheService,
-		Producer:               producer,
 		Consumer:               consumer,
 		NotificationService:    svc,
 		NotificationRepository: nr,
@@ -113,12 +108,9 @@ func initRedis(cfg *config.Config) (*caching.RedisService, error) {
 	return redisCache, nil
 }
 
-func initKafkaConsumer(cfg *config.Config) (messaging.Consumer, error) {
-	consumer, err := messaging.NewKafkaConsumer(messaging.ConsumerConfig{
-		BootstrapServers: cfg.KafkaBrokers[0],
-		GroupID:          cfg.KafkaConsumerGroup,
-		Topics:           cfg.KafkaConsumerTopics,
-	})
+func initRabbitMQConsumer(cfg *config.Config) (messaging.Consumer, error) {
+	amqpUrl := buildAmqpURL(cfg)
+	consumer, err := ms.NewRabbitConsumer(amqpUrl, cfg.RabbitMQExchange, cfg.RabbitMQQueue, cfg.RabbitMQRoutingKey, nil, logging.GetLogger())
 	if err != nil {
 		return nil, fmt.Errorf("kafka consumer init failed: %w", err)
 	}
@@ -129,4 +121,8 @@ func initKafkaConsumer(cfg *config.Config) (messaging.Consumer, error) {
 
 func buildJWKSURL(cfg *config.Config) string {
 	return fmt.Sprintf("%s/realms/%s/protocol/openid-connect/certs", cfg.KeycloakURL, cfg.KeycloakRealm)
+}
+
+func buildAmqpURL(cfg *config.Config) string {
+	return fmt.Sprintf("ampq://%s:%s/%s:%s/", cfg.RabbitMQUser, cfg.RabbitMQPassword, cfg.RabbitMQHost, cfg.RabbitMQPort)
 }
