@@ -70,7 +70,6 @@ func (c *Client) WritePump() {
 	}
 }
 
-// Send adds message to client’s outgoing queue
 func (c *Client) Send(msg interface{}) {
 	select {
 	case c.SendCh <- msg:
