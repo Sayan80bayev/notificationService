@@ -9,6 +9,7 @@ import (
 	"github.com/Sayan80bayev/go-project/pkg/messaging"
 	_ "github.com/lib/pq"
 	"notificationService/internal/config"
+	"notificationService/internal/events"
 	ms "notificationService/internal/messaging"
 	"notificationService/internal/repository"
 	"notificationService/internal/service"
@@ -46,17 +47,17 @@ func Init() (*Container, error) {
 		return nil, err
 	}
 
-	consumer, err := initRabbitMQConsumer(cfg)
+	nr := repository.NewNotificationRepository(db)
+	svc := service.NewNotificationService(nr)
+
+	consumer, err := initRabbitMQConsumer(cfg, svc)
 	if err != nil {
 		return nil, err
 	}
 
 	jwksURL := buildJWKSURL(cfg)
 
-	nr := repository.NewNotificationRepository(db)
-	svc := service.NewNotificationService(nr)
-
-	logger.Info("✅ Dependencies initialized successfully")
+	logger.Info("Dependencies initialized successfully")
 
 	return &Container{
 		DB:                     db,
@@ -108,12 +109,13 @@ func initRedis(cfg *config.Config) (*caching.RedisService, error) {
 	return redisCache, nil
 }
 
-func initRabbitMQConsumer(cfg *config.Config) (messaging.Consumer, error) {
+func initRabbitMQConsumer(cfg *config.Config, svc service.NotificationService) (messaging.Consumer, error) {
 	amqpUrl := buildAmqpURL(cfg)
-	consumer, err := ms.NewRabbitConsumer(amqpUrl, cfg.RabbitMQExchange, cfg.RabbitMQQueue, cfg.RabbitMQRoutingKey, nil, logging.GetLogger())
+	consumer, err := ms.NewRabbitConsumer(amqpUrl, cfg.RabbitMQExchange, cfg.RabbitMQQueue, cfg.RabbitMQRoutingKey, logging.GetLogger())
 	if err != nil {
 		return nil, fmt.Errorf("kafka consumer init failed: %w", err)
 	}
+	consumer.RegisterHandler(events.SubscriptionCreated, service.HandleSubscriptionCreated(svc))
 
 	logging.GetLogger().Infof("Kafka consumer initialized")
 	return consumer, nil
@@ -124,5 +126,10 @@ func buildJWKSURL(cfg *config.Config) string {
 }
 
 func buildAmqpURL(cfg *config.Config) string {
-	return fmt.Sprintf("ampq://%s:%s/%s:%s/", cfg.RabbitMQUser, cfg.RabbitMQPassword, cfg.RabbitMQHost, cfg.RabbitMQPort)
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/",
+		cfg.RabbitMQUser,
+		cfg.RabbitMQPassword,
+		cfg.RabbitMQHost,
+		cfg.RabbitMQPort,
+	)
 }

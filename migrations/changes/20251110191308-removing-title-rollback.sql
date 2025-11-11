@@ -1,0 +1,1 @@
+ALTER TABLE notifications ADD COLUMN title VARCHAR(50) NOT NULL DEFAULT 'system',

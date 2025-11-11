@@ -33,18 +33,16 @@ func (r *notificationRepo) Create(ctx context.Context, n *model.Notification) er
 	}
 	query := `
 		INSERT INTO notifications 
-		    (id, user_id, title, message, type, is_read, created_at, read_at)
+		    (id, user_id, message, is_read, created_at, read_at)
 		VALUES 
-		    ($1, $2, $3, $4, $5, $6, $7, $8)
+		    ($1, $2, $3, $4, $5, $6)
 	`
 	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		n.ID,
 		n.UserID,
-		n.Title,
 		n.Message,
-		n.Type,
 		n.IsRead,
 		n.CreatedAt,
 		n.ReadAt,
@@ -55,7 +53,7 @@ func (r *notificationRepo) Create(ctx context.Context, n *model.Notification) er
 // FindByID retrieves a notification by its ID
 func (r *notificationRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Notification, error) {
 	query := `
-		SELECT id, user_id, title, message, type, is_read, created_at, read_at
+		SELECT id, user_id, message, is_read, created_at, read_at
 		FROM notifications
 		WHERE id = $1
 	`
@@ -65,9 +63,7 @@ func (r *notificationRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.N
 	if err := row.Scan(
 		&n.ID,
 		&n.UserID,
-		&n.Title,
 		&n.Message,
-		&n.Type,
 		&n.IsRead,
 		&n.CreatedAt,
 		&n.ReadAt,
@@ -83,7 +79,7 @@ func (r *notificationRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.N
 // FindByUserID retrieves notifications for a user with pagination
 func (r *notificationRepo) FindByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]model.Notification, error) {
 	query := `
-		SELECT id, user_id, title, message, type, is_read, created_at, read_at
+		SELECT id, user_id, message, is_read, created_at, read_at
 		FROM notifications
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -101,9 +97,7 @@ func (r *notificationRepo) FindByUserID(ctx context.Context, userID uuid.UUID, l
 		if err := rows.Scan(
 			&n.ID,
 			&n.UserID,
-			&n.Title,
 			&n.Message,
-			&n.Type,
 			&n.IsRead,
 			&n.CreatedAt,
 			&n.ReadAt,

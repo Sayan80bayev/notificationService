@@ -46,9 +46,7 @@ func (h *NotificationHandler) CreateNotification(c *gin.Context) {
 
 	n := &model.Notification{
 		UserID:  userID,
-		Title:   req.Title,
 		Message: req.Message,
-		Type:    req.Type,
 	}
 
 	created, err := h.svc.CreateNotification(c, n)

@@ -3,23 +3,30 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"github.com/Sayan80bayev/go-project/pkg/logging"
 	"github.com/sirupsen/logrus"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+type Event struct {
+	Type string `json:"type"`
+	Data []byte `json:"data"`
+}
 type RabbitConsumer struct {
 	conn       *amqp.Connection
 	channel    *amqp.Channel
 	exchange   string
 	queue      string
 	routingKey string
-	handler    func(eventType string, data []byte)
+	handlers   map[string]EventHandler
 	logger     *logrus.Logger
 }
 
+type EventHandler func(data []byte) error
+
 // NewRabbitConsumer creates a new consumer bound to an exchange and routing key.
-func NewRabbitConsumer(amqpURL, exchange, queue, routingKey string, handler func(eventType string, data []byte), logger *logrus.Logger) (*RabbitConsumer, error) {
+func NewRabbitConsumer(amqpURL, exchange, queue, routingKey string, logger *logrus.Logger) (*RabbitConsumer, error) {
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
@@ -50,15 +57,15 @@ func NewRabbitConsumer(amqpURL, exchange, queue, routingKey string, handler func
 	}
 
 	logger.Infof("RabbitMQ consumer connected (queue=%s, routing=%s)", q.Name, routingKey)
-
+	handlers := make(map[string]EventHandler)
 	return &RabbitConsumer{
 		conn:       conn,
 		channel:    ch,
 		exchange:   exchange,
 		queue:      q.Name,
 		routingKey: routingKey,
-		handler:    handler,
 		logger:     logger,
+		handlers:   handlers,
 	}, nil
 }
 
@@ -89,9 +96,27 @@ func (c *RabbitConsumer) Start(ctx context.Context) {
 				continue
 			}
 			c.logger.Infof("[Consumer] Received event=%s body=%s", msg.RoutingKey, string(msg.Body))
-			c.handler(msg.RoutingKey, msg.Body)
+			c.handleRabbitEvent(msg.RoutingKey, msg.Body)
 		}
 	}
+}
+
+// handleRabbitEvent handles incoming RabbitMQ events for the notification service
+func (c *RabbitConsumer) handleRabbitEvent(eventType string, data []byte) {
+	logger := logging.GetLogger()
+
+	if handler, ok := c.handlers[eventType]; ok {
+		if err := handler(data); err != nil {
+			logger.Warnf("Failed to handle event (%s): %v", eventType, err)
+			return
+		}
+	} else {
+		logger.Warnf("Unrecognized event type: %s (payload: %s)", eventType, string(data))
+	}
+}
+
+func (c *RabbitConsumer) RegisterHandler(eventType string, handler EventHandler) {
+	c.handlers[eventType] = handler
 }
 
 func (c *RabbitConsumer) Close() {

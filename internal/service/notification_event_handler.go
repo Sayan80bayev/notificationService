@@ -1,42 +1,45 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/Sayan80bayev/go-project/pkg/logging"
-	"github.com/sirupsen/logrus"
+	"notificationService/cmd/server/ws"
+	"notificationService/internal/events"
+	"notificationService/internal/model"
 )
-
-// LikeEvent represents the structure of the message payload
-type LikeEvent struct {
-	ID          string `json:"id"`
-	PostID      string `json:"post_id"`
-	RecipientID string `json:"recipient_id"`
-	CreatedAt   string `json:"created_at"`
-}
-
-// HandleRabbitEvent handles incoming RabbitMQ events for the notification service
-func HandleRabbitEvent(eventType string, data []byte) {
-	logger := logging.GetLogger()
-
-	var evt LikeEvent
-	if err := json.Unmarshal(data, &evt); err != nil {
-		logger.Errorf("❌ Failed to unmarshal notification event (%s): %v", eventType, err)
-		return
-	}
-
-	switch eventType {
-	case "like.created":
-		handleLikeCreated(evt, logger)
-	default:
-		logger.Warnf("⚠️ Unrecognized event type: %s (payload: %s)", eventType, string(data))
-	}
-}
 
 // --- Individual event-specific handlers ---
 
-func handleLikeCreated(evt LikeEvent, logger *logrus.Logger) {
-	logger.Infof("Like Created: ID=%s User=%s Post=%s CreatedAt=%s", evt.ID, evt.RecipientID, evt.PostID, evt.CreatedAt)
-	// TODO: Add business logic, e.g.:
-	// - Store in database
-	// - Trigger sending pipeline (email/SMS)
+//func handleLikeCreated(evt LikeEvent, logger *logrus.Logger) {
+//	logger.Infof("Like Created: ID=%s User=%s Post=%s CreatedAt=%s", evt.ID, evt.RecipientID, evt.PostID, evt.CreatedAt)
+//	// TODO: Add business logic, e.g.:
+//	// - Store in database
+//	// - Trigger sending pipeline (email/SMS)
+//}
+
+func HandleSubscriptionCreated(svc NotificationService) func(data []byte) error {
+	return func(data []byte) error {
+		logger := logging.GetLogger()
+		var evt events.SubscriptionCreatedPayload
+		err := json.Unmarshal(data, &evt)
+		if err != nil {
+			return err
+		}
+
+		logger.Infof("Subscription Created: Follower=%s Followee=%s CreatedAt=%d", evt.FollowerID, evt.FolloweeID, evt.CreatedAt)
+		notification := &model.Notification{
+			UserID:  evt.FolloweeID,
+			Message: fmt.Sprintf("You have a new follower! %s, %d", evt.FollowerID, evt.CreatedAt),
+		}
+
+		res, err := svc.CreateNotification(context.Background(), notification)
+		if err != nil {
+			return err
+		}
+
+		ws.SendNotification(res.UserID, res.Message)
+		return nil
+	}
 }

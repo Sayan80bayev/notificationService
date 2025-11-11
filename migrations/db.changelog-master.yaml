@@ -19,3 +19,13 @@ databaseChangeLog:
       rollback:
         - sqlFile:
             path: migrations/changes/20251006222705-alter-notifications-table-rollback.sql
+
+  - changeSet:
+      id: 20251110191308-removing-title
+      author: sayanseksenbaev
+      changes:
+        - sqlFile:
+            path: migrations/changes/20251110191308-removing-title.sql
+      rollback:
+        - sqlFile:
+            path: migrations/changes/20251110191308-removing-title-rollback.sql

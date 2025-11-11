@@ -41,14 +41,8 @@ func (s *notificationService) CreateNotification(ctx context.Context, n *model.N
 	if n.UserID == uuid.Nil {
 		return nil, ErrInvalidUserID
 	}
-	if n.Title == "" {
-		return nil, ErrMissingTitle
-	}
 	if n.Message == "" {
 		return nil, ErrMissingMessage
-	}
-	if n.Type == "" {
-		n.Type = "system" // default type
 	}
 	n.ID = uuid.New()
 	n.CreatedAt = time.Now().UTC()
