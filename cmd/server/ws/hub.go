@@ -15,21 +15,18 @@ var hub = &Hub{
 	clients: make(map[uuid.UUID]*Client),
 }
 
-// Register user connection
 func (h *Hub) Register(client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.clients[client.UserID] = client
 }
 
-// Unregister on disconnect
 func (h *Hub) Unregister(userID uuid.UUID) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	delete(h.clients, userID)
 }
 
-// Send notification to a specific user
 func (h *Hub) SendNotification(userID uuid.UUID, message interface{}) {
 	h.mu.RLock()
 	client, ok := h.clients[userID]
@@ -39,7 +36,6 @@ func (h *Hub) SendNotification(userID uuid.UUID, message interface{}) {
 	}
 }
 
-// Exported helpers
 func Register(c *Client) {
 	hub.Register(c)
 	logging.GetLogger().Info("client registered: " + c.UserID.String())

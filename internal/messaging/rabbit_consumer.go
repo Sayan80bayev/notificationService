@@ -25,7 +25,6 @@ type RabbitConsumer struct {
 
 type EventHandler func(data []byte) error
 
-// NewRabbitConsumer creates a new consumer bound to an exchange and routing key.
 func NewRabbitConsumer(amqpURL, exchange, queue, routingKey string, logger *logrus.Logger) (*RabbitConsumer, error) {
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
@@ -101,7 +100,6 @@ func (c *RabbitConsumer) Start(ctx context.Context) {
 	}
 }
 
-// handleRabbitEvent handles incoming RabbitMQ events for the notification service
 func (c *RabbitConsumer) handleRabbitEvent(eventType string, data []byte) {
 	logger := logging.GetLogger()
 
